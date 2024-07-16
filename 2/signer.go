@@ -9,7 +9,8 @@ import (
 
 func SingleHash(in, out chan interface{}) {
 	wg := &sync.WaitGroup{}
-	md5Mu := &sync.Mutex{}
+	//md5Mu := &sync.Mutex{}
+	sema := make(chan struct{}, 1)
 	for val := range in {
 		strVal := fmt.Sprintf("%v", val)
 		wg.Add(1)
@@ -26,9 +27,11 @@ func SingleHash(in, out chan interface{}) {
 			}(firstTaskCh)
 
 			go func(result chan string) {
-				md5Mu.Lock()
+				//md5Mu.Lock()
+				sema <- struct{}{}
 				md5Result := DataSignerMd5(strVal)
-				md5Mu.Unlock()
+				<-sema
+				//md5Mu.Unlock()
 				result <- DataSignerCrc32(md5Result)
 			}(secondTaskCh)
 
