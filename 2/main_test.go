@@ -23,7 +23,6 @@ allow to work with tasks that requires input of undefined length. You need to pa
 the function to the next function in pipeline as soon as it is ready.
 */
 
-/*
 func TestPipeline(t *testing.T) {
 
 	var ok = true
@@ -59,7 +58,6 @@ func TestPipeline(t *testing.T) {
 		t.Errorf("no value free flow - dont collect them")
 	}
 }
-*/
 
 func TestSigner(t *testing.T) {
 

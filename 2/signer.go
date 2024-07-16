@@ -3,28 +3,75 @@ package main
 import "C"
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 )
 
 func SingleHash(in, out chan interface{}) {
+	wg := &sync.WaitGroup{}
+	md5Mu := &sync.Mutex{}
 	for val := range in {
 		strVal := fmt.Sprintf("%v", val)
-		fmt.Println(DataSignerCrc32(strVal))
-		out <- strVal
+		wg.Add(1)
+		go func(strVal string) {
+			defer wg.Done()
+
+			firstTaskCh := make(chan string, 1)
+			secondTaskCh := make(chan string, 1)
+
+			go func(result chan string) {
+				result <- DataSignerCrc32(strVal)
+			}(firstTaskCh)
+
+			go func(result chan string) {
+				md5Mu.Lock()
+				md5Result := DataSignerMd5(strVal)
+				md5Mu.Unlock()
+				result <- DataSignerCrc32(md5Result)
+			}(secondTaskCh)
+
+			result := <-firstTaskCh + "~" + <-secondTaskCh
+
+			out <- result
+		}(strVal)
 	}
+	wg.Wait()
 }
 
+const thCount = 6
+
 func MultiHash(in, out chan interface{}) {
+	wg := &sync.WaitGroup{}
 	for val := range in {
-		out <- val
+		strVal := fmt.Sprintf("%v", val)
+		wg.Add(1)
+		go func(strVal string) {
+			defer wg.Done()
+
+			wgTh := &sync.WaitGroup{}
+			result := [thCount]string{}
+			for i := 0; i < thCount; i++ {
+				wgTh.Add(1)
+				go func(i int) {
+					defer wgTh.Done()
+					result[i] = DataSignerCrc32(fmt.Sprintf("%v%v", i, strVal))
+				}(i)
+			}
+			wgTh.Wait()
+			out <- strings.Join(result[:], "")
+		}(strVal)
 	}
+	wg.Wait()
 }
 
 func CombineResults(in, out chan interface{}) {
-	for _ = range in {
-		//
+	data := make([]string, 0)
+	for val := range in {
+		data = append(data, fmt.Sprintf("%v", val))
 	}
-	out <- "TEST"
+	sort.Strings(data)
+	out <- strings.Join(data, "_")
 }
 
 func ExecutePipeline(jobs ...job) {
