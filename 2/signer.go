@@ -18,7 +18,9 @@ func SingleHash(in, out chan interface{}) {
 			defer wg.Done()
 
 			firstTaskCh := make(chan string, 1)
+			defer close(firstTaskCh)
 			secondTaskCh := make(chan string, 1)
+			defer close(secondTaskCh)
 
 			go func(result chan string) {
 				result <- DataSignerCrc32(strVal)
@@ -34,6 +36,7 @@ func SingleHash(in, out chan interface{}) {
 			result := <-firstTaskCh + "~" + <-secondTaskCh
 
 			out <- result
+
 		}(strVal)
 	}
 	wg.Wait()
