@@ -1,0 +1,3 @@
+compile:
+	go build handlers_gen/codegen.go
+	codegen.exe api.go api_handlers.go
